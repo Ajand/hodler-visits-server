@@ -1,0 +1,21 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+    - develop
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, projects]
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        clean: false
+    - name: Install Dependencies
+      run: yarn
+    - name: Start PM2
+      run: |
+        pm2 delete dev.api.jigen | true
+        pm2 start npm --name dev.api.jigen -- run start:src

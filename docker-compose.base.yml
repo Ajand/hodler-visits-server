@@ -1,0 +1,28 @@
+version: '3.3'
+
+services:
+  mongo:
+    image: mongo:3
+    networks:
+      app:
+        aliases:
+          - mongo
+    volumes:
+      - './mongo/:/data/db'
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 2
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+        window: 120s
+
+networks:
+  app:
+    external:
+      name: app
+  root:
+    external:
+      name: rootr
