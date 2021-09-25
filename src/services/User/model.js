@@ -1,6 +1,8 @@
 import mongoose from "mongoose";
 import keygen from "keygen";
 
+import RoleChecker from "./ACL.js";
+
 const UserSchema = new mongoose.Schema(
   {
     username: {
@@ -29,6 +31,12 @@ const UserSchema = new mongoose.Schema(
     addresses: [String],
     followers: [mongoose.Types.ObjectId],
     followings: [mongoose.Types.ObjectId],
+    role: {
+      type: String,
+      required: true,
+      default: "LISTENER",
+      enum: ["LISTENER", "VOTER", "SPEAKER", "MODERATOR"],
+    },
   },
   {
     timestamps: true,
@@ -56,7 +64,6 @@ const getNullableUserByAddress = (address) => {
   });
 };
 
-
 const get = (_id) => {
   return new Promise((resolve, reject) => {
     User.findOne({ _id }, (err, user) => {
@@ -69,7 +76,12 @@ const get = (_id) => {
 
 const create = (address) => {
   return new Promise((resolve, reject) => {
-    getUserByAddress(address)
+    var role;
+    RoleChecker(address)
+      .then((r) => {
+        role = r;
+        return getUserByAddress(address);
+      })
       .then(() => {
         return reject(new Error("User already existed."));
       })
@@ -78,6 +90,7 @@ const create = (address) => {
         const user = new User({
           addresses: [address],
           nonce,
+          role
         });
         return resolve(user.save());
       });

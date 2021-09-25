@@ -8,7 +8,10 @@ import { __dirname } from "../../util.js";
 import { methods, User } from "./model.js";
 import isVerifiedSign from "./Authentication/isVerifiedSign.js";
 
-const userShaper = (user) => ({...user._doc, tokens: tmethods.queries.getByOwner(user.addresses[0])})
+
+const userShaper = (user) => ({
+  ...user._doc,
+});
 
 export const UserModule = createModule({
   id: "userModule",
@@ -16,6 +19,13 @@ export const UserModule = createModule({
   typeDefs: [
     gql`
       scalar Upload
+
+      enum UserRoles {
+        LISTENER
+        VOTER
+        SPEAKER
+        MODERATOR
+      }
 
       type User {
         _id: ID!
@@ -29,8 +39,7 @@ export const UserModule = createModule({
         addresses: [String!]!
         followers: [String]
         followings: [String]
-        twitter: String
-        instagram: String
+        role: UserRoles
       }
 
       type Query {
@@ -94,6 +103,7 @@ export const UserModule = createModule({
 
     Mutation: {
       getNonce: (_, { address }, { userId }) => {
+
         return methods.queries
           .getUserByAddress(address)
           .then((user) => user)
@@ -182,7 +192,7 @@ export const UserModule = createModule({
           fs.mkdirSync(filesDirectory);
         }
 
-        console.log('upading avatar', { userId})
+        console.log("upading avatar", { userId });
         return new Promise((resolve, reject) => {
           avatar.promise
             .then(({ createReadStream }) => {
@@ -191,7 +201,7 @@ export const UserModule = createModule({
                   fs.createWriteStream(path.resolve(filesDirectory, filename))
                 )
                 .on("finish", (result) => {
-                  console.log(result)
+                  console.log(result);
                   methods.commands
                     .updateAvatar(userId, {
                       avatar: filename,
