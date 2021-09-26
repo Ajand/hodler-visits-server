@@ -8,7 +8,6 @@ import { __dirname } from "../../util.js";
 import { methods, User } from "./model.js";
 import isVerifiedSign from "./Authentication/isVerifiedSign.js";
 
-
 const userShaper = (user) => ({
   ...user._doc,
 });
@@ -66,11 +65,12 @@ export const UserModule = createModule({
         ): String!
 
         editProfile(
-          displayName: String
-          instagram: String
-          twitter: String
+          displayName: String!
+          username: String!
+          avatar: Upload
         ): String!
         updateAvatar(avatar: Upload!): String!
+        refetchRole: String!
 
         doesUsernameExist(username: String!): Boolean!
         setUsername(username: String!): String!
@@ -103,7 +103,6 @@ export const UserModule = createModule({
 
     Mutation: {
       getNonce: (_, { address }, { userId }) => {
-
         return methods.queries
           .getUserByAddress(address)
           .then((user) => user)
@@ -150,6 +149,8 @@ export const UserModule = createModule({
         { avatar, displayName, username, bio },
         { userId }
       ) => {
+        
+
         const filename = keygen.url(keygen.large);
         const filesDirectory = path.resolve(__dirname, "files");
 
@@ -157,6 +158,17 @@ export const UserModule = createModule({
           fs.mkdirSync(filesDirectory);
         }
         return new Promise((resolve, reject) => {
+          if (!avatar)
+          return methods.commands
+            .completeProfile(userId, {
+              displayName,
+              username,
+            })
+            .then((msg) => resolve(msg))
+            .catch((err) => {
+              throw new Error(err);
+            });
+
           avatar.promise
             .then(({ createReadStream }) => {
               createReadStream()
@@ -169,7 +181,6 @@ export const UserModule = createModule({
                       avatar: filename,
                       displayName,
                       username,
-                      bio,
                     })
                     .then((msg) => resolve(msg))
                     .catch((err) => {
@@ -220,9 +231,59 @@ export const UserModule = createModule({
         });
       },
 
-      editProfile: (_, { displayName, twitter, instagram }, { userId }) => {
+      editProfile: (_, { avatar, username, displayName }, { userId }) => {
+       
+
+        const filename = keygen.url(keygen.large);
+        const filesDirectory = path.resolve(__dirname, "files");
+
+        if (!fs.existsSync(filesDirectory)) {
+          fs.mkdirSync(filesDirectory);
+        }
+        return new Promise((resolve, reject) => {
+          if (!avatar){
+          return methods.commands
+            .editProfile(userId, {
+              displayName,
+              username,
+            })
+            .then((msg) => resolve(msg))
+            .catch((err) => {
+              throw new Error(err);
+            });}
+
+          return avatar.promise
+            .then(({ createReadStream }) => {
+              createReadStream()
+                .pipe(
+                  fs.createWriteStream(path.resolve(filesDirectory, filename))
+                )
+                .on("finish", (result) => {
+                  return methods.commands
+                    .editProfile(userId, {
+                      avatar: filename,
+                      username,
+                      displayName,
+                    })
+                    .then((msg) => {
+                      return resolve(msg);
+                    })
+                    .catch((err) => {
+                      console.log(err);
+                      throw new Error(err);
+                    });
+                });
+            })
+            .catch((err) => {
+              console.log(err);
+              throw new Error(err);
+            });
+        });
+      },
+
+      followUser: (_, { following }, { userId }) => {
         return methods.commands
-          .editProfile(userId, { displayName, twitter, instagram })
+          .follow(userId, following)
           .then((msg) => {
             return "user followed";
           })
@@ -232,11 +293,11 @@ export const UserModule = createModule({
           });
       },
 
-      followUser: (_, { following }, { userId }) => {
+      refetchRole: (_, { }, { userId }) => {
         return methods.commands
-          .follow(userId, following)
+          .refetchRole(userId)
           .then((msg) => {
-            return "user followed";
+            return "refetched role";
           })
           .catch((err) => {
             console.log(err);

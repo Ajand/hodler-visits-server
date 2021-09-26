@@ -90,7 +90,7 @@ const create = (address) => {
         const user = new User({
           addresses: [address],
           nonce,
-          role
+          role,
         });
         return resolve(user.save());
       });
@@ -151,27 +151,65 @@ const updateAvatar = (userId, { avatar }) => {
   });
 };
 
-const editProfile = (
-  userId,
-  { username, displayName, bio, twitter, instagram }
-) => {
+const editProfile = (userId, { avatar, username, displayName }) => {
   return new Promise((resolve, reject) => {
-    User.updateOne(
-      { _id: userId },
-      {
-        $set: {
-          username,
-          displayName,
-          bio,
-          twitter,
-          instagram,
+    if (avatar) {
+      User.updateOne(
+        { _id: userId },
+        {
+          $set: {
+            avatar,
+            username,
+            displayName,
+          },
         },
-      },
-      (err) => {
-        if (err) return reject(err);
-        return resolve("done");
-      }
-    );
+        (err) => {
+          if (err) return reject(err);
+          return resolve("done");
+        }
+      );
+    } else {
+      User.updateOne(
+        { _id: userId },
+        {
+          $set: {
+            username,
+            displayName,
+          },
+        },
+        (err) => {
+          if (err) return reject(err);
+          return resolve("done");
+        }
+      );
+    }
+  });
+};
+
+const refetchRole = (userId) => {
+  return new Promise((resolve, reject) => {
+    get(userId)
+      .then((user) => {
+        RoleChecker(user.addresses[0])
+          .then((role) => {
+            User.updateOne(
+              { _id: user._id },
+              {
+                $set: {
+                  role,
+                },
+              },
+              (err) => {
+                if (err) return reject(err);
+                return resolve("done");
+              }
+            );
+          })
+          .catch((err) => {
+            return reject(err);
+          });
+      })
+      .catch((err) => reject(err));
   });
 };
 
@@ -264,6 +302,7 @@ export const methods = {
     follow,
     updateAvatar,
     editProfile,
+    refetchRole,
   },
 };
 
