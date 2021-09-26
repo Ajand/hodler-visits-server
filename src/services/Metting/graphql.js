@@ -4,11 +4,7 @@ import { PubSub } from "graphql-subscriptions";
 
 const pubsub = new PubSub();
 
-setInterval(() => {
-  pubsub.publish("SIGNAL", {
-    signaling: "Some Random Signal",
-  });
-}, 1000);
+
 
 const MeetingModule = createModule({
   id: "meetingModule",
