@@ -8,6 +8,7 @@ import { __dirname } from "../../util.js";
 import { methods, User } from "./model.js";
 import isVerifiedSign from "./Authentication/isVerifiedSign.js";
 
+
 const userShaper = (user) => ({
   ...user._doc,
 });
