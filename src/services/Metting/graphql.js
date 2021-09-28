@@ -1,6 +1,6 @@
 import { createModule, gql } from "graphql-modules";
 import { __dirname } from "../../util.js";
-import pubsub from "./pubsub.js";
+import pubsub from "../pubsub.js";
 
 import {
   startSession,

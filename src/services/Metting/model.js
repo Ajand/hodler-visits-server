@@ -1,5 +1,5 @@
 import mediasoup from "mediasoup";
-import pubsub from "./pubsub.js";
+import pubsub from "../pubsub.js";
 
 // Started
 var meetingStatus = "offline";
