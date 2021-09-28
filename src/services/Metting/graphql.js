@@ -29,7 +29,7 @@ const MeetingModule = createModule({
         produce(transportId: String!, params: String!): String
       }
 
-      type Subscription {
+      extend type Subscription {
         changeStatus: String
         signaling: String
       }
