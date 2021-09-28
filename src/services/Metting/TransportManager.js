@@ -31,24 +31,47 @@ const startNewWorker = async () => {
   };
 
   currentWorker.on("died", (error) => {
-    removeWoker()
+    removeWoker();
   });
 
   currentWorker.observer.on("close", () => {
     console.log(`Worker pid ${currentWorker.pid} closed`);
-    removeWoker()
+    removeWoker();
   });
 };
 
-startNewWorker();
-startNewWorker();
+
 
 const shutDownWorker = async (index) => {
   if (!manager.workers) return;
   manager.workers[index]?.close();
 };
 
-const createRouter = () => {};
+const createRouter = async (workerIndex) => {
+  if (!manager.workers || !manager.workers[workerIndex]) return;
+  const mediaCodecs = [
+    {
+      kind: "audio",
+      mimeType: "audio/opus",
+      clockRate: 48000,
+      channels: 2,
+    },
+    {
+      kind: "video",
+      mimeType: "video/H264",
+      clockRate: 90000,
+      parameters: {
+        "packetization-mode": 1,
+        "profile-level-id": "42e01f",
+        "level-asymmetry-allowed": 1,
+      },
+    },
+  ];
+
+  const currentRouter = await manager.workers[workerIndex].createRouter({
+    mediaCodecs,
+  });
+};
 
 const shutDownRouter = () => {};
 
@@ -64,18 +87,17 @@ const createProducer = () => {};
 
 const shutDownProducer = () => {};
 
-setTimeout(() => {
-  shutDownWorker(0);
-}, 9000);
-
-setTimeout(() => {
-  shutDownWorker(0);
-}, 11000);
+//startNewWorker();
+//
+//setTimeout(() => {
+//    createRouter(0);
+//
+//}, 1000)
 
 const runner = () => {
   setInterval(() => {
-    console.log(manager);
+    console.log(manager, manager.workers[0]._routers);
   }, 4000);
 };
 
-runner();
+//runner();
