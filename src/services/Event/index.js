@@ -2,10 +2,10 @@ import graphqlModule from "./graphql.js";
 //import model from './model.js'
 
 
-const EventService = () => {
+const EventService = ({userService}) => {
   return {
    // model,
-    graphqlModule,
+    graphqlModule: graphqlModule({userService}),
   };
 };
 

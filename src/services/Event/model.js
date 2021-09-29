@@ -179,6 +179,7 @@ const addPoaps = (eventId, poaps) => {
 
 const changeEventStatus = (eventId, status) => {
   // Only moderator can change Event status
+  console.log(eventId, status)
   return new Promise((resolve, reject) => {
     Event.updateOne(
       { _id: eventId },
