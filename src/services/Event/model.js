@@ -179,7 +179,6 @@ const addPoaps = (eventId, poaps) => {
 
 const changeEventStatus = (eventId, status) => {
   // Only moderator can change Event status
-  console.log(eventId, status)
   return new Promise((resolve, reject) => {
     Event.updateOne(
       { _id: eventId },
@@ -267,7 +266,7 @@ const createPoll = ({
       options,
     });
 
-    return resolve(poll);
+    return resolve(poll.save());
   });
 };
 
@@ -277,16 +276,16 @@ const votePoll = (eventId, option, user) => {
       .then((poll) => {
         if (!poll) return reject("No poll found!");
         if (poll.votes.find((vote) => String(vote.voter) == String(user._id)))
-          return rejcet("Already voted");
+          return reject("Already voted");
         if (poll.onlyHodler && user.role === "LISTENER")
           return reject("Only hodlers can vote.");
         var voteWeight = 1;
         if (poll.weights.isWeighted) {
           const { want1, want2, want3 } = poll.weights;
           voteWeight =
-            Number(user.want1Balance) * Number(want1) +
-            Number(user.want2Balance) * Number(want2) +
-            Number(user.want3Balance) * Number(want3);
+            Number(1) * Number(want1) +
+            Number(1) * Number(want2) +
+            Number(1) * Number(want3);
         }
         const newVote = {
           voter: user._id,

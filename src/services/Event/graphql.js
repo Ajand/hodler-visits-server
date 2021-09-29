@@ -82,8 +82,17 @@ const EventModule = ({ userService }) =>
           connectToEvent: String!
           disconnectFromEvent: String!
 
-          createPoll: Poll!
-          vote: POAP!
+          createPoll(
+            eventId: ID!
+            isWeighted: Boolean
+            want1Weight: Int
+            want2Weight: Int
+            want3Weight: Int
+            onlyHodler: Boolean
+            options: [String]
+            body: String!
+          ): Poll!
+          vote(eventId: ID!, option: Int!): POAP!
 
           sendMessage(body: String, eventId: ID!): Message!
         }
@@ -189,6 +198,51 @@ const EventModule = ({ userService }) =>
                 messageSented: `message sented`,
               });
               return messageMapper(msg);
+            });
+        },
+
+        createPoll: (
+          _,
+          {
+            eventId,
+            isWeighted,
+            want1Weight,
+            want2Weight,
+            want3Weight,
+            onlyHodler,
+            body,
+            options,
+          },
+          { userId }
+        ) => {
+          return methods.commands
+            .createPoll({
+              eventId,
+              isWeighted,
+              want1Weight,
+              want2Weight,
+              want3Weight,
+              onlyHodler,
+              body,
+              options,
+            })
+            .then((poll) => {
+              pubsub.publish("CHANGE_EVENT_STATUS", {
+                eventStatusChanged: `Poll Added`,
+              });
+              return poll;
+            });
+        },
+
+        vote: (_, { eventId, option }, { userId }) => {
+          return userService.model.methods.queries
+            .get(userId)
+            .then((user) => methods.commands.votePoll(eventId, option, user))
+            .then((poap) => {
+              pubsub.publish("CHANGE_EVENT_STATUS", {
+                eventStatusChanged: `VOTED`,
+              });
+              return poap;
             });
         },
       },
