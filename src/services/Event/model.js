@@ -316,7 +316,7 @@ const sendMessage = (eventId, body, sender) => {
   return message.save();
 };
 
-const getMessages = () => {
+const getMessages = (eventId) => {
   return new Promise((resolve, reject) => {
     Message.find({ eventId }, (err, messages) => {
       if (err) return reject(err);

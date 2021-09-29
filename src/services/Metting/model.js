@@ -81,15 +81,11 @@ const produce = async (transportId, produceParams) => {
     ...JSON.parse(produceParams),
   }
 
-  console.log(params)
 
-  transporter
-    .produce(params)//.then((prod) => console.log(prod))
-    //.catch((err) => console.log(err));
+  const producer = await transporter
+    .produce(params)
 
-    //console.log(producer)
-
-  return "produce";
+  return producer.id;
 };
 
 export {

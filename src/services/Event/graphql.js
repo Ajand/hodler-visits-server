@@ -57,6 +57,7 @@ const EventModule = ({ userService }) =>
           eventId: String!
           body: String!
           _id: ID!
+          createdAt: String!
         }
 
         extend type Query {
@@ -84,13 +85,14 @@ const EventModule = ({ userService }) =>
           createPoll: Poll!
           vote: POAP!
 
-          sendMessage: Message!
+          sendMessage(body: String, eventId: ID!): Message!
         }
 
         type Subscription {
           userConnection: String!
           pollCreated: String!
           eventStatusChanged: String!
+          messageSented: String!
         }
       `,
     ],
@@ -101,17 +103,32 @@ const EventModule = ({ userService }) =>
         },
 
         event: (_, { id }) => {
-          const eventMapper = (userSerive) => (ev) => {
+          const eventMapper = (ev) => {
             return {
               ...ev._doc,
-              users: [...onlineUsers].map((userId) =>
-                userSerive.model.methods.queries.get(userId)
+              onlineUsers: Promise.all(
+                [...onlineUsers].map((userId) =>
+                  userService.model.methods.queries.get(userId)
+                )
               ),
               poll: methods.queries.getPoll(ev._id),
             };
           };
 
-          return methods.queries.getEvent(id);
+          return methods.queries
+            .getEvent(id)
+            .then((event) => eventMapper(event));
+        },
+
+        messages: (_, { eventId }) => {
+          const messageMapper = (message) => ({
+            ...message._doc,
+            sender: userService.model.methods.queries.get(message.sender),
+          });
+
+          return methods.queries
+            .getMessages(eventId)
+            .then((messages) => messages.map(messageMapper));
         },
       },
 
@@ -141,11 +158,47 @@ const EventModule = ({ userService }) =>
               return "Status Chagned";
             });
         },
+
+        connectToEvent: (_, __, { userId }) => {
+          onlineUsers.add(userId);
+
+          pubsub.publish("CHANGE_EVENT_STATUS", {
+            eventStatusChanged: `user ${userId} has connected`,
+          });
+          return "connected";
+        },
+
+        disconnectFromEvent: (_, __, { userId }) => {
+          onlineUsers.delete(userId);
+          pubsub.publish("CHANGE_EVENT_STATUS", {
+            eventStatusChanged: `user ${userId} has disconnected`,
+          });
+          return "disconnected";
+        },
+
+        sendMessage: (_, { eventId, body }, { userId }) => {
+          const messageMapper = (message) => ({
+            ...message._doc,
+            sender: userService.model.methods.queries.get(message.sender),
+          });
+
+          return methods.commands
+            .sendMessage(eventId, body, userId)
+            .then((msg) => {
+              pubsub.publish("MESSAGE_SENTED", {
+                messageSented: `message sented`,
+              });
+              return messageMapper(msg);
+            });
+        },
       },
 
       Subscription: {
         eventStatusChanged: {
           subscribe: () => pubsub.asyncIterator(["CHANGE_EVENT_STATUS"]),
+        },
+        messageSented: {
+          subscribe: () => pubsub.asyncIterator(["MESSAGE_SENTED"]),
         },
       },
     },
