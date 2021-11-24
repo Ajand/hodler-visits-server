@@ -6,7 +6,13 @@ import methods from "./model.js";
 
 const onlineUsers = new Set();
 
-const EventModule = ({ userService }) =>
+const stagers = new Map();
+const stagerProducers = new Map();
+
+const usersConsumeTransport = new Map();
+const usersRtpCaps = new Map();
+
+const EventModule = ({ userService, meetingService }) =>
   createModule({
     id: "eventModule",
     dirname: __dirname,
@@ -28,6 +34,7 @@ const EventModule = ({ userService }) =>
           poll: Poll
           onlineUsers: [User]
           _id: ID!
+          stagers: [String]
         }
 
         type PollWeight {
@@ -82,6 +89,13 @@ const EventModule = ({ userService }) =>
           connectToEvent: String!
           disconnectFromEvent: String!
 
+          sendRTPCap(rtpCap: String!): String
+          wannaConsume(stager: ID!): String
+
+          joinStage: String
+          connectSendTransport(transportId: String!, params: String!): String
+          produce(transportId: String!, params: String!): String
+
           createPoll(
             eventId: ID!
             isWeighted: Boolean
@@ -121,6 +135,7 @@ const EventModule = ({ userService }) =>
                 )
               ),
               poll: methods.queries.getPoll(ev._id),
+              stagers: [...stagers.keys()],
             };
           };
 
@@ -160,7 +175,10 @@ const EventModule = ({ userService }) =>
         changeEventStatus: (_, { eventId, status }) => {
           return methods.commands
             .changeEventStatus(eventId, status)
-            .then(() => {
+            .then(async () => {
+              if (status === "STARTED") {
+                await meetingService.model.startSession();
+              }
               pubsub.publish("CHANGE_EVENT_STATUS", {
                 eventStatusChanged: `Event with id ${eventId} have changed its status to ${status}`,
               });
@@ -168,13 +186,90 @@ const EventModule = ({ userService }) =>
             });
         },
 
-        connectToEvent: (_, __, { userId }) => {
+        joinStage: async (_, __, { userId }) => {
+          pubsub.publish("CHANGE_EVENT_STATUS", {
+            eventStatusChanged: `user ${userId} has joined stage`,
+          });
+
+          const { transportParams, transport } =
+            await meetingService.model.createSendTransport();
+
+          stagers.set(userId, transport);
+
+          return transportParams;
+        },
+
+        connectSendTransport: (_, { transportId, params }) => {
+          if (!meetingService.model.getRouter()) return "";
+          return meetingService.model.connectTransport(transportId, params);
+        },
+
+        produce: async (_, { transportId, params }, { userId }) => {
+          if (!meetingService.model.getRouter()) return "";
+          const oldStager = stagerProducers.get(userId)
+            ? stagerProducers.get(userId)
+            : [];
+          const producerId = await meetingService.model.produce(
+            transportId,
+            params
+          );
+
+          console.log("producers adding", userId);
+
+          stagerProducers.set(userId, [...oldStager, producerId]);
+
+          return "Producer Added";
+        },
+
+        connectToEvent: async (_, __, { userId }) => {
           onlineUsers.add(userId);
 
           pubsub.publish("CHANGE_EVENT_STATUS", {
             eventStatusChanged: `user ${userId} has connected`,
           });
-          return "connected";
+
+          const { transportParams, transport } =
+            await meetingService.model.createRecvTransport();
+
+          usersConsumeTransport.set(userId, transport);
+
+          return transportParams;
+        },
+
+        sendRTPCap: (_, { rtpCap }, { userId }) => {
+          // TODO WE SHOULD CHECK WETHER IT CAN CONSUME SPECIFIC PRODUCER OR NOT
+          // FOR NOW WE NEED A PRODUCER
+          usersRtpCaps.set(userId, JSON.parse(rtpCap));
+          return "hi";
+        },
+
+        wannaConsume: async (_, { stager }, { userId }) => {
+          const router = meetingService.model.getRouter();
+          const stag = stagers.get(stager);
+          const producers = stagerProducers.get(stager);
+          const consumerRtpCaps = usersRtpCaps.get(userId);
+          const consumerTransport = usersConsumeTransport.get(userId);
+
+
+          if (
+            producers &&
+            producers.length &&
+            router.canConsume({
+              producerId: producers[0],
+              rtpCapabilities: consumerRtpCaps,
+            })
+          ) {
+           const consumer = await consumerTransport.consume({
+              producerId: producers[0],
+              rtpCapabilities: consumerRtpCaps,
+            });
+
+            console.log(consumer.params)
+
+            return "hi"
+          } else {
+            return "";
+          }
         },
 
         disconnectFromEvent: (_, __, { userId }) => {

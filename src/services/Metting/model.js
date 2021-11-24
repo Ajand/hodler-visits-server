@@ -7,6 +7,7 @@ var meetingStatus = "offline";
 var worker = null;
 var router = null;
 
+
 const startSession = async () => {
   // create worker
   if (!worker || !router) {
@@ -36,14 +37,19 @@ const startSession = async () => {
     });
 
     meetingStatus = "started";
-
-    pubsub.publish("CHANGE_STATUS", {
-      changeStatus: "Meeting Started",
-    });
   }
 
   return "Meeting Started";
 };
+
+startSession().then(() => {
+  console.log("session started")
+}).catch(err => {
+  console.log(err)
+})
+
+const getRouter = () => router
+const getWorker = () => worker
 
 const createSendTransport = async () => {
   //console.log("here is the transport", router);
@@ -57,8 +63,24 @@ const createSendTransport = async () => {
 
   const transportParams = { id: transport.id, ...transport._data };
 
-  return JSON.stringify(transportParams);
+  return {transportParams: JSON.stringify(transportParams), transport};
 };
+
+const createRecvTransport = async () => {
+  //console.log("here is the transport", router);
+
+  const transport = await router.createWebRtcTransport({
+    listenIps: [{ ip: "0.0.0.0", announcedIp: "159.48.55.203" }],
+    enableUdp: true,
+    enableTcp: true,
+    preferUdp: true,
+  });
+
+  const transportParams = { id: transport.id, ...transport._data };
+
+  return {transportParams: JSON.stringify(transportParams), transport};
+};
+
 
 const connectTransport = async (transportId, connectParams) => {
   const transporter = router._transports.get(transportId);
@@ -94,6 +116,20 @@ export {
   meetingStatus,
   router,
   createSendTransport,
+  createRecvTransport,
   connectTransport,
   produce
+};
+
+export default {
+  worker,
+  startSession,
+  meetingStatus,
+  router,
+  createSendTransport,
+  createRecvTransport,
+  connectTransport,
+  produce,
+  getRouter,
+  getWorker
 };

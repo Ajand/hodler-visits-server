@@ -11,6 +11,7 @@ import {
   produce,
 } from "./model.js";
 
+
 const MeetingModule = createModule({
   id: "meetingModule",
   dirname: __dirname,
@@ -25,8 +26,6 @@ const MeetingModule = createModule({
         endSession: String
         getRTPCap: String!
         createSendTransport: String!
-        connectSendTransport(transportId: String!, params: String!): String
-        produce(transportId: String!, params: String!): String
       }
 
       extend type Subscription {
@@ -56,16 +55,7 @@ const MeetingModule = createModule({
         return createSendTransport();
       },
 
-      connectSendTransport: (_, { transportId, params }) => {
-        if (!router) return "";
-        return connectTransport(transportId, params);
-      },
-
-      produce: (_, { transportId, params }) => {
-
-        if (!router) return "";
-        return produce(transportId, params);
-      },
+     
     },
 
     Subscription: {

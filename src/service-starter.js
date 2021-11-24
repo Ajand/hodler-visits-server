@@ -3,8 +3,8 @@ import MeetingService from "./services/Metting/index.js";
 import EventService from "./services/Event/index.js";
 
 const userService = UserService();
-const eventService = EventService({userService});
 const meetingService = MeetingService();
+const eventService = EventService({userService, meetingService});
 
 export { userService, meetingService, eventService };
 
